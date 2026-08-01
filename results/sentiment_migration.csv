@@ -1,0 +1,4 @@
+sentiment,Downgrade,No Change,Upgrade
+negative,0.787,0.205,0.007
+neutral,0.555,0.209,0.236
+positive,0.387,0.234,0.379

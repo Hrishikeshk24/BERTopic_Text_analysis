@@ -1,0 +1,13 @@
+PD_ID,warning_signal_comment,pd_grade_before,pd_grade_after
+PD200001,"Revolver is nearly maxed out at 97% drawn and the cash balance dropped below $6M this month. Without sponsor support the company runs out of liquidity within two quarters.",7,10
+PD200002,"Leverage covenant tripped again this quarter at 5.9x against a 4.0x limit. The bank group is negotiating a waiver with a pricing step-up as a condition.",8,10
+PD200003,"Sales fell 18% versus last year and the order book keeps shrinking. Management cut guidance for the second time.",6,8
+PD200004,"The finance chief quit with no successor lined up, the third senior departure this year. Reporting quality is expected to suffer.",5,6
+PD200005,"Freight rates remain below breakeven across the sector and two peers entered Chapter 11. Fleet utilization stuck near 65%.",7,9
+PD200006,"Audited statements are now four months late and the auditor flagged revenue recognition issues that may lead to a going concern note.",9,11
+PD200007,"$180M term loan comes due in under a year with no takeout arranged. Bonds quoted in the low 60s suggest the market doubts a refinance.",8,11
+PD200008,"The anchor account, roughly a third of revenue, chose not to renew. Pipeline replacement covers under 40% of the loss.",6,8
+PD200009,"Regulators opened a probe into billing practices and legal reserves were topped up by $22M. New bookings may take a reputational hit.",7,8
+PD200010,"EBITDA jumped 30% on the back of the restructuring and margins are back to double digits. Revolver fully repaid and undrawn.",8,6
+PD200011,"Sponsor put in $60M of fresh equity which cured the breach, and the amended facility now matures in 2030. Leverage back under 3x.",9,7
+PD200012,"Quarter was broadly in line with plan; no covenant issues and liquidity is adequate. Continuing to monitor the sector backdrop.",6,6
