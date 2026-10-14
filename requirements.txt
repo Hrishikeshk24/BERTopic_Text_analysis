@@ -21,3 +21,9 @@ vaderSentiment>=3.3
 gradio>=5.0
 huggingface-hub>=0.34,<1.0   # gradio may pull hub 1.x, which breaks transformers 4.x
 jinja2>=3.1.2                # required by gradio's dataframe component
+
+# BERTopic + LLM hybrid (optional): topic_model.py --llm, predict.py --llm,
+# app.py APP_LLM=1. Needs a local Ollama server (https://ollama.com) with a
+# model pulled, e.g. `ollama pull llama3.2`. Falls back to the existing
+# keyword/cosine-similarity logic if Ollama isn't reachable.
+requests>=2.31

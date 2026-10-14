@@ -28,7 +28,23 @@ SEED = 42
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--embedding", choices=["minilm", "tfidf"], default="minilm")
+parser.add_argument("--llm", action="store_true",
+                    help="Generate topic labels with a local Ollama LLM "
+                         "(BERTopic+LLM hybrid) instead of raw c-TF-IDF keywords. "
+                         "Requires `ollama serve` running with the model pulled.")
+parser.add_argument("--llm-model", default=None,
+                    help="Ollama model tag (default: $OLLAMA_MODEL or llama3.2:latest)")
 args = parser.parse_args()
+
+llm_rep = None
+if args.llm:
+    from ollama_llm import OllamaRepresentation, is_available, OLLAMA_MODEL
+    llm_model_name = args.llm_model or OLLAMA_MODEL
+    if is_available():
+        llm_rep = OllamaRepresentation(model=llm_model_name)
+    else:
+        print(f"--llm requested but Ollama is not reachable at {os.environ.get('OLLAMA_HOST', 'http://localhost:11434')} "
+              "-- falling back to keyword-only labels.")
 
 df = pd.read_csv("data/warning_signals.csv")
 docs = df["warning_signal_comment"].tolist()
@@ -87,6 +103,7 @@ topic_model = BERTopic(
     umap_model=umap_model,
     hdbscan_model=hdbscan_model,
     vectorizer_model=vectorizer_model,
+    representation_model={"LLM": llm_rep} if llm_rep else None,
     calculate_probabilities=False,
     verbose=True,
 )
@@ -102,14 +119,27 @@ if n_outliers:
                                          embeddings=embeddings)
     topic_model.update_topics(docs, topics=topics, vectorizer_model=vectorizer_model)
 
-# 4. Human-readable label = top 4 keywords
+# 4. Human-readable label = top 4 keywords (always available), optionally
+#    replaced by the LLM-generated label when --llm is on and it produced one
 info = topic_model.get_topic_info()
-def label_for(tid):
+def keyword_label_for(tid):
     words = [w for w, _ in topic_model.get_topic(tid)][:4]
     return " / ".join(words)
+
+def llm_label_for(tid):
+    if not llm_rep:
+        return ""
+    aspect = topic_model.topic_aspects_.get("LLM", {}).get(tid)
+    return aspect[0][0] if aspect and aspect[0][0] else ""
+
+def label_for(tid):
+    return llm_label_for(tid) or keyword_label_for(tid)
+
+info["keyword_label"] = info["Topic"].apply(lambda t: keyword_label_for(t) if t != -1 else "outlier")
+info["llm_label"] = info["Topic"].apply(lambda t: llm_label_for(t) if t != -1 else "")
 info["auto_label"] = info["Topic"].apply(lambda t: label_for(t) if t != -1 else "outlier")
 info.rename(columns={"Topic": "topic_id", "Count": "size"})[
-    ["topic_id", "size", "auto_label", "Representation"]
+    ["topic_id", "size", "auto_label", "keyword_label", "llm_label", "Representation"]
 ].to_csv("results/topic_summary.csv", index=False)
 
 df["topic_id"] = topics
@@ -138,5 +168,7 @@ with open("models/config.json", "w") as f:
     json.dump({"embedding_backend": args.embedding,
                "topic_ids": [int(t) for t in tids],
                "topic_labels": labels_map,
+               "llm_enabled": bool(llm_rep),
+               "llm_model": (args.llm_model or os.environ.get("OLLAMA_MODEL", "llama3.2:latest")) if llm_rep else None,
                "seed": SEED}, f, indent=2)
 print("Saved scoring artifacts to models/ (bertopic_model, topic_centroids.npy, config.json)")

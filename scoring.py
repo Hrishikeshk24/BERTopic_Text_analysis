@@ -13,6 +13,12 @@ import numpy as np
 from bertopic import BERTopic
 
 MODELS_DIR = "models"
+# Opt-in LLM-assisted re-check for ambiguous/outlier assignments (see
+# ollama_llm.py). Mirrors the APP_ENGINE convention in app.py; predict.py
+# also exposes this as --llm. Off by default -- pure cosine-similarity
+# nearest-centroid behavior is unchanged unless explicitly enabled.
+USE_LLM_DEFAULT = os.environ.get("APP_LLM", "0") == "1"
+LLM_TOP_K = 3
 
 
 class Artifacts:
@@ -48,13 +54,22 @@ def load_artifacts(models_dir=MODELS_DIR):
     return Artifacts(models_dir)
 
 
-def assign_topics(docs, arts):
+def assign_topics(docs, arts, use_llm=None):
     """Frozen-model topic assignment with nearest-centroid fallback.
 
+    use_llm: if True (or None and $APP_LLM=1), outlier docs that fall back
+    to nearest-centroid are re-checked against their top-K centroid
+    candidates by a local Ollama LLM (see ollama_llm.py) instead of taking
+    the raw cosine-similarity argmax. Fails soft to the argmax pick if
+    Ollama is unreachable.
+
     Returns dict of lists: topic_id, topic_label, topic_assignment
-    (direct | nearest_centroid), topic_similarity (cosine to assigned
-    topic's centroid, 0..1-ish).
+    (direct | nearest_centroid | llm_assigned), topic_similarity (cosine to
+    assigned topic's centroid, 0..1-ish).
     """
+    if use_llm is None:
+        use_llm = USE_LLM_DEFAULT
+
     embeddings = arts.embed(docs)
     topics, _ = arts.topic_model.transform(docs, embeddings)
     topics = np.array(topics)
@@ -68,6 +83,21 @@ def assign_topics(docs, arts):
     fallback = topics == -1
     if fallback.any():
         topics[fallback] = arts.centroid_ids[sims[fallback].argmax(axis=1)]
+
+    if use_llm and fallback.any():
+        from ollama_llm import is_available, llm_pick_topic
+        if is_available():
+            for i in np.where(fallback)[0]:
+                order = np.argsort(-sims[i])[:LLM_TOP_K]
+                candidates = [
+                    {"id": int(arts.centroid_ids[j]),
+                     "label": arts.labels_map[int(arts.centroid_ids[j])],
+                     "keywords": arts.topic_keywords(int(arts.centroid_ids[j]))}
+                    for j in order]
+                picked = llm_pick_topic(docs[i], candidates)
+                if picked is not None:
+                    topics[i] = picked
+                    assignment[i] = "llm_assigned"
 
     sim_to_assigned = [
         round(float(sims[i, np.where(arts.centroid_ids == t)[0][0]]), 4)

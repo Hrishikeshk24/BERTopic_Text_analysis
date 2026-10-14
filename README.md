@@ -3,6 +3,9 @@
 Analyzes unstructured underwriter warning-signal comments: discovers themes with
 BERTopic, scores sentiment with FinBERT, and ties both back to PD grade
 migration (1 = best, 14 = worst; an increase in grade number is a downgrade).
+Optionally, a local LLM (Ollama) can be layered on top to generate better
+topic labels and resolve ambiguous topic assignments — see
+[BERTopic + LLM hybrid](#bertopic--llm-hybrid-optional) below.
 
 ## Layout
 
@@ -16,6 +19,8 @@ pipeline/
   analysis.py          Stage 4: PD migration vs topic/sentiment
   predict.py           Score NEW comments against the frozen models (CLI)
   app.py               Gradio UI for interactive scoring
+  ollama_llm.py        Optional BERTopic+LLM hybrid (local Ollama) --
+                       topic labeling + ambiguous-assignment re-check
   run_pipeline.py      Orchestrator (training/batch path)
   data/warning_signals.csv          input (PD_ID key)
   models/                           frozen artifacts for prediction
@@ -47,6 +52,7 @@ without refitting:
 ```bash
 python predict.py --input data/new_comments.csv --output results/predictions.csv
 # offline environments: add --engine lexicon
+# LLM-assisted re-check of ambiguous assignments (needs Ollama, see below): add --llm
 ```
 
 Input needs `PD_ID, warning_signal_comment`; if `pd_grade_before/after` are
@@ -56,16 +62,17 @@ topic_assignment, topic_similarity, sentiment, sentiment_score`.
 How assignment works: `BERTopic.transform()` maps each new comment through the
 frozen UMAP + HDBSCAN (`approximate_predict`). Comments landing in no cluster
 (-1) are assigned to the nearest topic centroid by cosine similarity instead of
-being left unthemed; `topic_assignment` records which path was used and
-`topic_similarity` gives an auditable confidence — filter low values for
-analyst review. Topic IDs stay stable between refits, so scoring runs are
-comparable over time.
+being left unthemed; `topic_assignment` records which path was used (`direct`,
+`nearest_centroid`, or — with `--llm` — `llm_assigned`) and `topic_similarity`
+gives an auditable confidence — filter low values for analyst review. Topic
+IDs stay stable between refits, so scoring runs are comparable over time.
 
 ## Interactive scoring app (Gradio)
 
 ```bash
 python app.py                     # http://127.0.0.1:7860
 APP_ENGINE=lexicon python app.py  # default the engine dropdown to offline
+APP_LLM=1 python app.py           # LLM-assisted re-check of ambiguous assignments (needs Ollama, see below)
 ```
 
 Two tabs. "Single comment": paste a comment, optionally pick PD grade
@@ -87,6 +94,44 @@ Replace `data/warning_signals.csv` with your extract keeping columns
 ```bash
 python run_pipeline.py --skip-datagen
 ```
+
+## BERTopic + LLM hybrid (optional)
+
+Opt-in use of a local Ollama LLM (https://ollama.com) to improve on the
+default c-TF-IDF keywords and cosine-similarity outlier handling. Off by
+default everywhere; falls back silently to the existing logic if Ollama
+isn't running.
+
+```bash
+ollama serve                    # if not already running
+ollama pull llama3.2            # or any other local model
+```
+
+**Topic creation** — `topic_model.py --llm [--llm-model TAG]` adds an "LLM"
+representation aspect: for each topic, the model is prompted with that
+topic's keywords + a few representative comments and asked for a short,
+human-readable theme name, e.g. `keyword_label` "violation / equity / breach /
+operations" becomes `llm_label` "Covenant Breach Indicators". This becomes
+`topic_label` everywhere (`results/topic_summary.csv`'s `llm_label` column,
+`results/doc_topics.csv`, `models/config.json`). The raw c-TF-IDF keywords
+are kept alongside as `keyword_label` and are still what `topic_keywords()` /
+the app's "Keywords:" field show — only the headline label changes. Training
+on `data/warning_signals.csv` with `--llm` currently produces labels like
+"Refinancing Risk Indicators", "Working Capital Squeeze", "Governance Board
+Composition" and "Debt Maturity Wall" — see `results/topic_summary.csv` for
+the full set.
+
+**Topic assignment** — `predict.py --llm` and, for the Gradio app,
+`APP_LLM=1 python app.py` re-check comments that don't land directly in an
+HDBSCAN cluster (today resolved by picking the nearest topic centroid by
+raw cosine similarity). Instead, the top-3 nearest candidate topics (id,
+label, keywords) are shown to the LLM along with the comment, and it picks
+the best match. `topic_assignment` records `llm_assigned` when this path
+was used (vs. `direct` / `nearest_centroid`).
+
+Both call a local Ollama server over HTTP (`OLLAMA_HOST`, default
+`http://localhost:11434`; `OLLAMA_MODEL`, default `llama3.2:latest`) — no
+API keys, nothing leaves the machine.
 
 ## Key design points
 
