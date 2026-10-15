@@ -24,8 +24,9 @@ parser.add_argument("--input", required=True)
 parser.add_argument("--output", default="results/predictions.csv")
 parser.add_argument("--engine", choices=["finbert", "lexicon"], default="finbert")
 parser.add_argument("--llm", action="store_true",
-                    help="Re-check outlier/ambiguous topic assignments with a "
-                         "local Ollama LLM instead of raw nearest-centroid cosine similarity.")
+                    help="Consult a local Ollama LLM on every topic assignment; it can "
+                         "override the statistical pick only when that pick was already "
+                         "low-confidence (see scoring.LLM_OVERRIDE_SIM_THRESHOLD).")
 args = parser.parse_args()
 
 arts = load_artifacts()
@@ -51,8 +52,6 @@ if {"pd_grade_before", "pd_grade_after"}.issubset(df.columns):
         ["Downgrade", "Upgrade"], default="No Change")
 
 df.to_csv(args.output, index=False)
-a = pd.Series(topic_out["topic_assignment"])
-print(f"direct: {(a == 'direct').sum()}, nearest_centroid fallback: {(a == 'nearest_centroid').sum()}, "
-      f"llm_assigned: {(a == 'llm_assigned').sum()}")
+print(pd.Series(topic_out["topic_assignment"]).value_counts().to_string())
 print(df["sentiment"].value_counts().to_string())
 print(f"Saved {args.output}")

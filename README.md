@@ -122,16 +122,72 @@ Composition" and "Debt Maturity Wall" — see `results/topic_summary.csv` for
 the full set.
 
 **Topic assignment** — `predict.py --llm` and, for the Gradio app,
-`APP_LLM=1 python app.py` re-check comments that don't land directly in an
-HDBSCAN cluster (today resolved by picking the nearest topic centroid by
-raw cosine similarity). Instead, the top-3 nearest candidate topics (id,
-label, keywords) are shown to the LLM along with the comment, and it picks
-the best match. `topic_assignment` records `llm_assigned` when this path
-was used (vs. `direct` / `nearest_centroid`).
+`APP_LLM=1 python app.py` consult the LLM on *every* comment (its top
+candidate topics — the statistical pick plus its top-3 nearest centroids by
+cosine similarity — are shown alongside the comment text), but the LLM's
+answer is only **applied** when the statistical pick was already
+low-confidence (`topic_similarity < scoring.LLM_OVERRIDE_SIM_THRESHOLD`,
+default 0.15 — the same cutoff the app already uses to flag a result for
+manual review). A confident direct cluster hit is never second-guessed.
+`topic_assignment` records `llm_confirmed` / `llm_reassigned` when the LLM's
+verdict was applied, `llm_skipped_confident` when it was consulted but the
+statistical pick was kept, and `direct` / `nearest_centroid` when `--llm`
+isn't on at all.
+
+This gate exists because letting the LLM override *every* pick — including
+confident ones — was tried first and measured worse, not better: see
+[Accuracy evaluation](#accuracy-evaluation-evaluate_assignmentpy) below.
 
 Both call a local Ollama server over HTTP (`OLLAMA_HOST`, default
 `http://localhost:11434`; `OLLAMA_MODEL`, default `llama3.2:latest`) — no
 API keys, nothing leaves the machine.
+
+## Accuracy evaluation (evaluate_assignment.py)
+
+Training-time topic purity (the `Mean topic purity vs ground truth` line
+`analysis.py` prints) only measures how well BERTopic's own fit-time
+clusters line up with the synthetic `true_theme` labels on the data they
+were fit on — it says nothing about `scoring.assign_topics()`, the function
+`predict.py`/`app.py` actually use to score **new** comments.
+`evaluate_assignment.py` closes that gap with an honest, held-out
+evaluation:
+
+```bash
+python evaluate_assignment.py                # full run (trains an eval-only model if needed)
+python evaluate_assignment.py --retrain        # force-refit the eval-only model
+python evaluate_assignment.py --skip-llm        # statistical baseline only (fast, no Ollama calls)
+python evaluate_assignment.py --sample 50        # LLM pass on a random 50-row subsample (quick iteration)
+```
+
+It stratified-splits `data/warning_signals.csv` 80/20 by `true_theme`,
+fits a **separate** eval-only BERTopic model on the 80% train split only
+(`models_eval/`, `results_eval/` — production `models/`/`results/` are
+never touched), builds a topic→`true_theme` mapping from the train split's
+own assignments, then scores the 20% held-out comments — which the model
+never saw — through `scoring.assign_topics()` twice (statistical baseline
+vs. `--llm`) and compares each to the ground-truth theme. Reports accuracy,
+precision/recall/F1 (macro + weighted, per theme), a confusion matrix, the
+LLM/baseline agreement rate, and accuracy specifically on the subset the
+LLM changed — saved to `results_eval/assignment_eval_predictions.csv` and
+`assignment_eval_report.json`.
+
+**Result on the current model** (400 held-out comments): baseline accuracy
+56.5% (macro F1 0.483). Letting the LLM override *every* pick regressed
+this to 50.5% — on the 147 comments it changed, the statistical baseline
+was right 51.0% of the time vs. the LLM's override only 34.7% (e.g. "Borrower
+breached the maximum leverage covenant..." was correctly tagged
+`covenant_breach` by the statistical pick, then wrongly reassigned to
+`liquidity_stress` by the LLM, despite `covenant_breach` being in its
+candidate list). With the confidence gate described above, accuracy holds
+at 56.5% (no regression) — but on this particular held-out split, every
+comment's statistical pick was already above the 0.15 similarity cutoff
+(even HDBSCAN-outlier/nearest-centroid picks averaged 0.71 similarity), so
+the LLM was consulted 400/400 times and never actually applied. The
+takeaway: for this model and dataset, the small local LLM is measurably
+*less* reliable at topic assignment than the embedding-based statistical
+method, and only a much higher override threshold would let it intervene
+at all — which the first (ungated) experiment shows would cost accuracy,
+not add it.
 
 ## Key design points
 

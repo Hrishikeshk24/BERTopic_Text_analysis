@@ -1,0 +1,489 @@
+{
+  "baseline": {
+    "accuracy": 0.565,
+    "report": {
+      "covenant_breach": {
+        "precision": 0.7678571428571429,
+        "recall": 0.8113207547169812,
+        "f1-score": 0.7889908256880734,
+        "support": 53.0
+      },
+      "customer_concentration": {
+        "precision": 0.3902439024390244,
+        "recall": 0.5517241379310345,
+        "f1-score": 0.45714285714285713,
+        "support": 29.0
+      },
+      "deleveraging": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1-score": 0.0,
+        "support": 20.0
+      },
+      "industry_headwinds": {
+        "precision": 0.4666666666666667,
+        "recall": 0.2,
+        "f1-score": 0.28,
+        "support": 35.0
+      },
+      "legal_regulatory": {
+        "precision": 0.7692307692307693,
+        "recall": 0.8,
+        "f1-score": 0.7843137254901961,
+        "support": 25.0
+      },
+      "liquidity_stress": {
+        "precision": 0.6712328767123288,
+        "recall": 0.8305084745762712,
+        "f1-score": 0.7424242424242424,
+        "support": 59.0
+      },
+      "management_turnover": {
+        "precision": 0.2,
+        "recall": 0.125,
+        "f1-score": 0.15384615384615385,
+        "support": 24.0
+      },
+      "performance_improvement": {
+        "precision": 0.3404255319148936,
+        "recall": 0.6666666666666666,
+        "f1-score": 0.4507042253521127,
+        "support": 24.0
+      },
+      "refinancing_risk": {
+        "precision": 0.43636363636363634,
+        "recall": 0.5454545454545454,
+        "f1-score": 0.48484848484848486,
+        "support": 44.0
+      },
+      "reporting_delinquency": {
+        "precision": 0.625,
+        "recall": 0.40540540540540543,
+        "f1-score": 0.4918032786885246,
+        "support": 37.0
+      },
+      "revenue_decline": {
+        "precision": 0.6875,
+        "recall": 0.66,
+        "f1-score": 0.673469387755102,
+        "support": 50.0
+      },
+      "accuracy": 0.565,
+      "macro avg": {
+        "precision": 0.48677459328949657,
+        "recall": 0.508734544068264,
+        "f1-score": 0.4825039255668861,
+        "support": 400.0
+      },
+      "weighted avg": {
+        "precision": 0.5421263919956192,
+        "recall": 0.565,
+        "f1-score": 0.5399931579805455,
+        "support": 400.0
+      }
+    },
+    "confusion_matrix_labels": [
+      "covenant_breach",
+      "customer_concentration",
+      "deleveraging",
+      "industry_headwinds",
+      "legal_regulatory",
+      "liquidity_stress",
+      "management_turnover",
+      "performance_improvement",
+      "refinancing_risk",
+      "reporting_delinquency",
+      "revenue_decline"
+    ],
+    "confusion_matrix": [
+      [
+        43,
+        0,
+        0,
+        0,
+        0,
+        10,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        16,
+        0,
+        0,
+        6,
+        0,
+        0,
+        7,
+        0,
+        0,
+        0
+      ],
+      [
+        3,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        15,
+        0,
+        0
+      ],
+      [
+        0,
+        11,
+        0,
+        7,
+        0,
+        0,
+        0,
+        7,
+        0,
+        0,
+        10
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        20,
+        0,
+        5,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        10,
+        0,
+        0,
+        0,
+        0,
+        49,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        3,
+        0,
+        7,
+        9,
+        5
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        8,
+        0,
+        16,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        12,
+        0,
+        8,
+        0,
+        0,
+        0,
+        0,
+        24,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        6,
+        7,
+        0,
+        9,
+        15,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        17,
+        0,
+        0,
+        33
+      ]
+    ]
+  },
+  "llm": {
+    "accuracy": 0.565,
+    "report": {
+      "covenant_breach": {
+        "precision": 0.7678571428571429,
+        "recall": 0.8113207547169812,
+        "f1-score": 0.7889908256880734,
+        "support": 53.0
+      },
+      "customer_concentration": {
+        "precision": 0.3902439024390244,
+        "recall": 0.5517241379310345,
+        "f1-score": 0.45714285714285713,
+        "support": 29.0
+      },
+      "deleveraging": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1-score": 0.0,
+        "support": 20.0
+      },
+      "industry_headwinds": {
+        "precision": 0.4666666666666667,
+        "recall": 0.2,
+        "f1-score": 0.28,
+        "support": 35.0
+      },
+      "legal_regulatory": {
+        "precision": 0.7692307692307693,
+        "recall": 0.8,
+        "f1-score": 0.7843137254901961,
+        "support": 25.0
+      },
+      "liquidity_stress": {
+        "precision": 0.6712328767123288,
+        "recall": 0.8305084745762712,
+        "f1-score": 0.7424242424242424,
+        "support": 59.0
+      },
+      "management_turnover": {
+        "precision": 0.2,
+        "recall": 0.125,
+        "f1-score": 0.15384615384615385,
+        "support": 24.0
+      },
+      "performance_improvement": {
+        "precision": 0.3404255319148936,
+        "recall": 0.6666666666666666,
+        "f1-score": 0.4507042253521127,
+        "support": 24.0
+      },
+      "refinancing_risk": {
+        "precision": 0.43636363636363634,
+        "recall": 0.5454545454545454,
+        "f1-score": 0.48484848484848486,
+        "support": 44.0
+      },
+      "reporting_delinquency": {
+        "precision": 0.625,
+        "recall": 0.40540540540540543,
+        "f1-score": 0.4918032786885246,
+        "support": 37.0
+      },
+      "revenue_decline": {
+        "precision": 0.6875,
+        "recall": 0.66,
+        "f1-score": 0.673469387755102,
+        "support": 50.0
+      },
+      "accuracy": 0.565,
+      "macro avg": {
+        "precision": 0.48677459328949657,
+        "recall": 0.508734544068264,
+        "f1-score": 0.4825039255668861,
+        "support": 400.0
+      },
+      "weighted avg": {
+        "precision": 0.5421263919956192,
+        "recall": 0.565,
+        "f1-score": 0.5399931579805455,
+        "support": 400.0
+      }
+    },
+    "confusion_matrix_labels": [
+      "covenant_breach",
+      "customer_concentration",
+      "deleveraging",
+      "industry_headwinds",
+      "legal_regulatory",
+      "liquidity_stress",
+      "management_turnover",
+      "performance_improvement",
+      "refinancing_risk",
+      "reporting_delinquency",
+      "revenue_decline"
+    ],
+    "confusion_matrix": [
+      [
+        43,
+        0,
+        0,
+        0,
+        0,
+        10,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        16,
+        0,
+        0,
+        6,
+        0,
+        0,
+        7,
+        0,
+        0,
+        0
+      ],
+      [
+        3,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        15,
+        0,
+        0
+      ],
+      [
+        0,
+        11,
+        0,
+        7,
+        0,
+        0,
+        0,
+        7,
+        0,
+        0,
+        10
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        20,
+        0,
+        5,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        10,
+        0,
+        0,
+        0,
+        0,
+        49,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        3,
+        0,
+        7,
+        9,
+        5
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        8,
+        0,
+        16,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        12,
+        0,
+        8,
+        0,
+        0,
+        0,
+        0,
+        24,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        6,
+        7,
+        0,
+        9,
+        15,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        17,
+        0,
+        0,
+        33
+      ]
+    ],
+    "n_scored": 400
+  },
+  "agreement_rate": 1.0,
+  "lift": 0.0
+}

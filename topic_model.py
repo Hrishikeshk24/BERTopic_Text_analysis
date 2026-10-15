@@ -3,10 +3,14 @@ topic_model.py
 --------------
 Stage 2: BERTopic topic modeling on warning-signal comments.
 
-Input : data/warning_signals.csv
+Input : data/warning_signals.csv (--data to point at a different CSV, e.g.
+        a train-only split written by evaluate_assignment.py)
 Output: results/doc_topics.csv        (PD_ID -> topic assignment + keywords)
         results/topic_summary.csv     (topic id, size, top keywords, auto label)
         results/embeddings.npy        (cached sentence embeddings)
+        (--results-dir / --models-dir redirect all of the above, e.g. to
+        results_eval/ / models_eval/ for a held-out evaluation model that
+        doesn't touch the production artifacts)
 
 Pipeline: embeddings -> UMAP -> HDBSCAN -> c-TF-IDF keywords
 
@@ -34,6 +38,15 @@ parser.add_argument("--llm", action="store_true",
                          "Requires `ollama serve` running with the model pulled.")
 parser.add_argument("--llm-model", default=None,
                     help="Ollama model tag (default: $OLLAMA_MODEL or llama3.2:latest)")
+parser.add_argument("--data", default="data/warning_signals.csv",
+                    help="Training CSV (default: data/warning_signals.csv). Used by "
+                         "evaluate_assignment.py to fit a held-out-split eval model "
+                         "without touching the production training data.")
+parser.add_argument("--models-dir", default="models",
+                    help="Where to write frozen scoring artifacts (default: models/)")
+parser.add_argument("--results-dir", default="results",
+                    help="Where to write topic_summary.csv / doc_topics.csv / "
+                         "embeddings cache (default: results/)")
 args = parser.parse_args()
 
 llm_rep = None
@@ -46,12 +59,12 @@ if args.llm:
         print(f"--llm requested but Ollama is not reachable at {os.environ.get('OLLAMA_HOST', 'http://localhost:11434')} "
               "-- falling back to keyword-only labels.")
 
-df = pd.read_csv("data/warning_signals.csv")
+df = pd.read_csv(args.data)
 docs = df["warning_signal_comment"].tolist()
-os.makedirs("results", exist_ok=True)
+os.makedirs(args.results_dir, exist_ok=True)
 
 # 1. Embeddings (computed once, cached for reuse)
-cache = f"results/embeddings_{args.embedding}.npy"
+cache = f"{args.results_dir}/embeddings_{args.embedding}.npy"
 if os.path.exists(cache) and os.environ.get("REFRESH") != "1":
     print(f"Loading cached embeddings from {cache}")
     embeddings = np.load(cache)
@@ -80,8 +93,8 @@ else:
     np.save(cache, embeddings)
     # persist the fitted embedding pipeline so NEW comments get embedded
     # in the identical vector space at prediction time
-    os.makedirs("models", exist_ok=True)
-    joblib.dump(embed_pipe, "models/embed_pipeline_tfidf.joblib")
+    os.makedirs(args.models_dir, exist_ok=True)
+    joblib.dump(embed_pipe, f"{args.models_dir}/embed_pipeline_tfidf.joblib")
 
 # 2. Sub-models (fixed seeds for reproducibility — required for model governance)
 umap_model = UMAP(n_neighbors=15, n_components=5, min_dist=0.0,
@@ -140,14 +153,14 @@ info["llm_label"] = info["Topic"].apply(lambda t: llm_label_for(t) if t != -1 el
 info["auto_label"] = info["Topic"].apply(lambda t: label_for(t) if t != -1 else "outlier")
 info.rename(columns={"Topic": "topic_id", "Count": "size"})[
     ["topic_id", "size", "auto_label", "keyword_label", "llm_label", "Representation"]
-].to_csv("results/topic_summary.csv", index=False)
+].to_csv(f"{args.results_dir}/topic_summary.csv", index=False)
 
 df["topic_id"] = topics
 df["topic_label"] = df["topic_id"].apply(label_for)
-df.to_csv("results/doc_topics.csv", index=False)
+df.to_csv(f"{args.results_dir}/doc_topics.csv", index=False)
 
 print(info[["Topic", "Count", "auto_label"]].to_string(index=False))
-print(f"\n{len(info) - (1 if -1 in info.Topic.values else 0)} topics found. Saved results/doc_topics.csv")
+print(f"\n{len(info) - (1 if -1 in info.Topic.values else 0)} topics found. Saved {args.results_dir}/doc_topics.csv")
 
 # ---------------------------------------------------------------------------
 # 5. Persist artifacts for scoring NEW comments (predict.py)
@@ -156,19 +169,19 @@ print(f"\n{len(info) - (1 if -1 in info.Topic.values else 0)} topics found. Save
 #    - config recording which embedding backend the model was trained with
 # ---------------------------------------------------------------------------
 import json
-os.makedirs("models", exist_ok=True)
-topic_model.save("models/bertopic_model", serialization="pickle")
+os.makedirs(args.models_dir, exist_ok=True)
+topic_model.save(f"{args.models_dir}/bertopic_model", serialization="pickle")
 
 tids = sorted(set(topics))
 centroids = np.vstack([embeddings[np.array(topics) == t].mean(axis=0) for t in tids])
-np.save("models/topic_centroids.npy", centroids)
+np.save(f"{args.models_dir}/topic_centroids.npy", centroids)
 
 labels_map = {int(t): label_for(t) for t in tids}
-with open("models/config.json", "w") as f:
+with open(f"{args.models_dir}/config.json", "w") as f:
     json.dump({"embedding_backend": args.embedding,
                "topic_ids": [int(t) for t in tids],
                "topic_labels": labels_map,
                "llm_enabled": bool(llm_rep),
                "llm_model": (args.llm_model or os.environ.get("OLLAMA_MODEL", "llama3.2:latest")) if llm_rep else None,
                "seed": SEED}, f, indent=2)
-print("Saved scoring artifacts to models/ (bertopic_model, topic_centroids.npy, config.json)")
+print(f"Saved scoring artifacts to {args.models_dir}/ (bertopic_model, topic_centroids.npy, config.json)")
